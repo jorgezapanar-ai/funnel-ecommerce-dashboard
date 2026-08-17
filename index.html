@@ -251,6 +251,7 @@
     .shot-head-actions { display: flex; gap: 6px; flex-shrink: 0; }
     .shot-btn { width: 30px; height: 30px; border: 1px solid var(--line); border-radius: 8px; background: #f5f3ed; display: grid; place-items: center; cursor: pointer; color: var(--muted); font-size: 13px; transition: all .15s; }
     .shot-btn:hover { background: var(--ink); color: #fff; border-color: var(--ink); }
+    .shot-btn.upload-active { background: var(--purple); color: #fff; border-color: var(--purple); }
     .shot-btn.refreshing { animation: spin .8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .shot-body { position: relative; height: 260px; background: #f0ede6; overflow: hidden; }
@@ -259,6 +260,21 @@
     .shot-card:hover .shot-body img { transform: scale(1.02); }
     .shot-card.expanded:hover .shot-body img { transform: none; }
     .shot-body iframe { width: 100%; height: 100%; border: 0; }
+    .shot-drop-zone { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: rgba(118,86,214,.08); border: 2px dashed var(--purple); border-radius: 0; z-index: 5; pointer-events: none; }
+    .shot-drop-zone.visible { display: flex; }
+    .shot-drop-zone-icon { font-size: 36px; color: var(--purple); opacity: .6; }
+    .shot-drop-zone span { color: var(--purple); font-size: 12px; font-weight: 750; }
+    .shot-drop-zone small { color: #8a7ea0; font-size: 10px; }
+    .shot-upload-bar { position: absolute; bottom: 0; left: 0; right: 0; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px; background: linear-gradient(transparent, rgba(21,24,20,.65)); z-index: 4; opacity: 0; transition: opacity .2s; }
+    .shot-body:hover .shot-upload-bar, .shot-body.dragover .shot-upload-bar { opacity: 1; }
+    .shot-upload-pill { display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: 999px; background: rgba(255,255,255,.92); color: var(--ink); font-size: 10px; font-weight: 750; cursor: pointer; border: 1px solid rgba(255,255,255,.5); backdrop-filter: blur(6px); transition: all .15s; }
+    .shot-upload-pill:hover { background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+    .shot-upload-pill .icon { font-size: 13px; }
+    .shot-mobile-upload { display: none; }
+    @media (hover: none) and (pointer: coarse) {
+      .shot-upload-bar { opacity: 1; }
+      .shot-mobile-upload { display: inline-flex; }
+    }
     .shot-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--muted); gap: 10px; }
     .shot-placeholder-icon { font-size: 32px; opacity: .4; }
     .shot-placeholder span { font-size: 11px; font-weight: 650; }
@@ -457,7 +473,7 @@
           <strong>Cada paso = una URL real</strong>
           <p>Las capturas se generan al vuelo desde la URL de cada etapa del funnel. Haz clic en una tarjeta para ver en detalle.</p>
           <div class="capture-actions">
-            <button class="btn-capture primary" id="refreshAll" type="button">&#8635; Actualizar todo</button>
+            <button class="btn-capture primary" id="refreshAll" type="button">&#8635; Capturar autom&#225;ticamente</button>
             <button class="btn-capture" id="openAllUrls" type="button">&#8599; Abrir todas las URLs</button>
           </div>
         </aside>
@@ -734,9 +750,52 @@
       { name: 'Venta confirmada', short: 'Venta', url: 'https://www.avinkadelivery.com/', color: '#bff39a' }
     ];
     let screenshotTimestamps = {};
+    const LS_PREFIX = 'funnel_shot_';
 
     function getScreenshotUrl(url, width = 1200, height = 800) {
-      return `https://image.thum.io/get/width/${width}/height/${height}/png/https://${url.replace(/^https?:\/\//, '')}`;
+      return `https://image.thum.io/get/width/${width}/height${height}/png/https://${url.replace(/^https?:\/\//, '')}`;
+    }
+
+    function getStoredImage(index) {
+      try { return localStorage.getItem(LS_PREFIX + index); } catch { return null; }
+    }
+
+    function storeImage(index, dataUrl) {
+      try { localStorage.setItem(LS_PREFIX + index, dataUrl); } catch (e) {
+        console.warn('localStorage full, image not stored', e);
+      }
+    }
+
+    function removeStoredImage(index) {
+      try { localStorage.removeItem(LS_PREFIX + index); } catch {}
+    }
+
+    function handleFileUpload(index, file) {
+      if (!file || !file.type.startsWith('image/')) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        const dataUrl = e.target.result;
+        storeImage(index, dataUrl);
+        displayUploadedImage(index, dataUrl);
+        const now = new Date().toLocaleString('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+        screenshotTimestamps[index] = now;
+        const status = document.getElementById(`shotStatus${index}`);
+        const time = document.getElementById(`shotTime${index}`);
+        if (status) status.innerHTML = '<div class="shot-status-dot ok"></div><span>Subido manual</span>';
+        if (time) time.textContent = now;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function displayUploadedImage(index, src) {
+      const body = document.getElementById(`shotBody${index}`);
+      if (!body) return;
+      body.innerHTML = '';
+      const img = new Image();
+      img.onload = () => body.appendChild(img);
+      img.src = src;
+      img.alt = `Captura: ${funnelSteps[index].name}`;
+      img.style.cssText = 'width:100%;height:100%;object-fit:cover;object-position:top';
     }
 
     function renderFlowStrip() {
@@ -767,12 +826,17 @@
               <div><div class="shot-step-name">${step.name}</div><div class="shot-step-url" title="${step.url}">${step.url}</div></div>
             </div>
             <div class="shot-head-actions">
-              <button class="shot-btn" data-action="refresh" data-step="${i}" title="Actualizar captura">&#8635;</button>
+              <button class="shot-btn" data-action="refresh" data-step="${i}" title="Actualizar captura autom&#225;tica">&#8635;</button>
+              <button class="shot-btn" data-action="upload" data-step="${i}" title="Subir imagen manual">&#8682;</button>
+              <button class="shot-btn shot-mobile-upload" data-action="camera" data-step="${i}" title="Tomar foto">&#128247;</button>
               <button class="shot-btn" data-action="open" data-step="${i}" title="Abrir URL en nueva pesta&#241;a">&#8599;</button>
               <button class="shot-btn" data-action="expand" data-step="${i}" title="Ver ampliado">&#9974;</button>
+              <button class="shot-btn" data-action="clear" data-step="${i}" title="Borrar imagen guardada">&#10005;</button>
             </div>
           </div>
-          <div class="shot-body" id="shotBody${i}">
+          <div class="shot-body" id="shotBody${i}" data-step="${i}">
+            <div class="shot-drop-zone" id="dropZone${i}"><div class="shot-drop-zone-icon">&#8682;</div><span>Suelta la imagen aqu&#237;</span><small>PNG, JPG o WebP</small></div>
+            <div class="shot-upload-bar"><label class="shot-upload-pill" for="fileInput${i}"><span class="icon">&#8682;</span>Subir imagen</label></div>
             <div class="shot-loading"><div class="shot-spinner"></div><span>Capturando ${step.short}...</span></div>
           </div>
           <div class="shot-foot">
@@ -782,25 +846,58 @@
             </div>
             <span class="shot-cvr">${cvr}</span>
           </div>
+          <input type="file" id="fileInput${i}" accept="image/*" data-step="${i}" style="display:none">
+          <input type="file" id="cameraInput${i}" accept="image/*" capture="environment" data-step="${i}" style="display:none">
         </article>`;
       }).join('');
+
       grid.querySelectorAll('.shot-btn').forEach(btn => {
         btn.addEventListener('click', e => {
           e.stopPropagation();
           const action = btn.dataset.action;
           const idx = Number(btn.dataset.step);
           if (action === 'refresh') loadScreenshot(idx);
+          else if (action === 'upload') document.getElementById(`fileInput${idx}`).click();
+          else if (action === 'camera') document.getElementById(`cameraInput${idx}`).click();
           else if (action === 'open') window.open(funnelSteps[idx].url, '_blank');
           else if (action === 'expand') openModal(idx);
+          else if (action === 'clear') { removeStoredImage(idx); loadScreenshot(idx); }
         });
       });
+
+      grid.querySelectorAll('input[type="file"]').forEach(input => {
+        input.addEventListener('change', e => {
+          handleFileUpload(Number(e.target.dataset.step), e.target.files[0]);
+          e.target.value = '';
+        });
+      });
+
+      grid.querySelectorAll('.shot-body').forEach(body => {
+        const idx = Number(body.dataset.step);
+        body.addEventListener('dragover', e => { e.preventDefault(); body.classList.add('dragover'); const dz = document.getElementById(`dropZone${idx}`); if (dz) dz.classList.add('visible'); });
+        body.addEventListener('dragleave', e => { if (!body.contains(e.relatedTarget)) { body.classList.remove('dragover'); const dz = document.getElementById(`dropZone${idx}`); if (dz) dz.classList.remove('visible'); }});
+        body.addEventListener('drop', e => { e.preventDefault(); body.classList.remove('dragover'); const dz = document.getElementById(`dropZone${idx}`); if (dz) dz.classList.remove('visible'); handleFileUpload(idx, e.dataTransfer.files[0]); });
+      });
+
       grid.querySelectorAll('.shot-card').forEach(card => {
         card.addEventListener('click', e => {
-          if (e.target.closest('.shot-btn')) return;
+          if (e.target.closest('.shot-btn') || e.target.closest('input[type="file"]') || e.target.closest('.shot-upload-pill')) return;
           openModal(Number(card.dataset.step));
         });
       });
-      funnelSteps.forEach((_, i) => loadScreenshot(i));
+
+      funnelSteps.forEach((_, i) => {
+        const stored = getStoredImage(i);
+        if (stored) {
+          displayUploadedImage(i, stored);
+          const status = document.getElementById(`shotStatus${i}`);
+          const time = document.getElementById(`shotTime${i}`);
+          if (status) status.innerHTML = '<div class="shot-status-dot ok"></div><span>Guardado local</span>';
+          if (time) time.textContent = 'Cargado de cach&#233;';
+        } else {
+          loadScreenshot(i);
+        }
+      });
     }
 
     function loadScreenshot(index) {
@@ -808,47 +905,66 @@
       const status = document.getElementById(`shotStatus${index}`);
       const time = document.getElementById(`shotTime${index}`);
       if (!body) return;
-      body.innerHTML = '<div class="shot-loading"><div class="shot-spinner"></div><span>Capturando...</span></div>';
-      status.innerHTML = '<div class="shot-status-dot pending"></div><span>Capturando...</span>';
+      const stored = getStoredImage(index);
+      if (stored) { displayUploadedImage(index, stored); if (status) status.innerHTML = '<div class="shot-status-dot ok"></div><span>Guardado local</span>'; if (time) time.textContent = 'Cargado de cach&#233;'; return; }
+      body.innerHTML = '<div class="shot-drop-zone" id="dropZone' + index + '"><div class="shot-drop-zone-icon">&#8682;</div><span>Suelta la imagen aqu&#237;</span><small>PNG, JPG o WebP</small></div><div class="shot-upload-bar"><label class="shot-upload-pill" for="fileInput' + index + '"><span class="icon">&#8682;</span>Subir imagen</label></div><div class="shot-loading"><div class="shot-spinner"></div><span>Capturando...</span></div>';
+      if (status) status.innerHTML = '<div class="shot-status-dot pending"></div><span>Capturando...</span>';
       const img = new Image();
       img.onload = () => {
-        body.innerHTML = '';
+        body.innerHTML = '<div class="shot-drop-zone" id="dropZone' + index + '"><div class="shot-drop-zone-icon">&#8682;</div><span>Suelta la imagen aqu&#237;</span><small>PNG, JPG o WebP</small></div><div class="shot-upload-bar"><label class="shot-upload-pill" for="fileInput' + index + '"><span class="icon">&#8682;</span>Subir imagen</label></div>';
         body.appendChild(img);
         const now = new Date().toLocaleString('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
         screenshotTimestamps[index] = now;
-        status.innerHTML = '<div class="shot-status-dot ok"></div><span>Capturado</span>';
-        time.textContent = now;
+        if (status) status.innerHTML = '<div class="shot-status-dot ok"></div><span>Capturado</span>';
+        if (time) time.textContent = now;
+        reattachDropZone(index);
       };
       img.onerror = () => {
-        body.innerHTML = `<div class="shot-placeholder"><div class="shot-placeholder-icon">&#9634;</div><span>No se pudo capturar</span><span style="font-size:10px;color:#999">${funnelSteps[index].url}</span></div>`;
-        status.innerHTML = '<div class="shot-status-dot error"></div><span>Error</span>';
-        time.textContent = '';
+        body.innerHTML = '<div class="shot-drop-zone" id="dropZone' + index + '"><div class="shot-drop-zone-icon">&#8682;</div><span>Suelta la imagen aqu&#237;</span><small>PNG, JPG o WebP</small></div><div class="shot-upload-bar"><label class="shot-upload-pill" for="fileInput' + index + '"><span class="icon">&#8682;</span>Subir imagen</label></div><div class="shot-placeholder"><div class="shot-placeholder-icon">&#9634;</div><span>Autom&#225;tica no disponible &mdash; sube una imagen</span><span style="font-size:10px;color:#999">' + funnelSteps[index].url + '</span></div>';
+        if (status) status.innerHTML = '<div class="shot-status-dot error"></div><span>Sin captura</span>';
+        if (time) time.textContent = '';
+        reattachDropZone(index);
       };
       img.src = getScreenshotUrl(funnelSteps[index].url);
-      img.alt = `Captura: ${funnelSteps[index].name}`;
-      img.style.width = '100%';
-      img.style.height = '100%';
-      img.style.objectFit = 'cover';
-      img.style.objectPosition = 'top';
+      img.alt = 'Captura: ' + funnelSteps[index].name;
+      img.style.cssText = 'width:100%;height:100%;object-fit:cover;object-position:top';
+    }
+
+    function reattachDropZone(index) {
+      const body = document.getElementById('shotBody' + index);
+      if (!body) return;
+      body.addEventListener('dragover', e => { e.preventDefault(); body.classList.add('dragover'); const dz = document.getElementById('dropZone' + index); if (dz) dz.classList.add('visible'); });
+      body.addEventListener('dragleave', e => { if (!body.contains(e.relatedTarget)) { body.classList.remove('dragover'); const dz = document.getElementById('dropZone' + index); if (dz) dz.classList.remove('visible'); }});
+      body.addEventListener('drop', e => { e.preventDefault(); body.classList.remove('dragover'); const dz = document.getElementById('dropZone' + index); if (dz) dz.classList.remove('visible'); handleFileUpload(index, e.dataTransfer.files[0]); });
     }
 
     function openModal(index) {
       const step = funnelSteps[index];
       const modal = document.getElementById('shotModal');
-      document.getElementById('modalTitle').innerHTML = `<span style="display:inline-flex;align-items:center;gap:8px"><span style="display:inline-grid;place-items:center;width:26px;height:26px;border-radius:7px;background:${step.color};color:#fff;font-size:11px;font-weight:850">${index + 1}</span>${step.name}</span>`;
+      document.getElementById('modalTitle').innerHTML = '<span style="display:inline-flex;align-items:center;gap:8px"><span style="display:inline-grid;place-items:center;width:26px;height:26px;border-radius:7px;background:' + step.color + ';color:#fff;font-size:11px;font-weight:850">' + (index + 1) + '</span>' + step.name + '</span>';
       const body = document.getElementById('modalBody');
-      body.innerHTML = '<div class="shot-loading"><div class="shot-spinner"></div><span>Cargando vista ampliada...</span></div>';
+      const stored = getStoredImage(index);
+      if (stored) {
+        body.innerHTML = '';
+        const img = new Image();
+        img.onload = () => body.appendChild(img);
+        img.src = stored;
+        img.alt = 'Vista ampliada: ' + step.name;
+        img.style.cssText = 'width:100%;display:block';
+      } else {
+        body.innerHTML = '<div class="shot-loading"><div class="shot-spinner"></div><span>Cargando vista ampliada...</span></div>';
+        const img = new Image();
+        img.onload = () => { body.innerHTML = ''; body.appendChild(img); };
+        img.onerror = () => {
+          body.innerHTML = '<div class="shot-placeholder" style="min-height:400px"><div class="shot-placeholder-icon">&#9634;</div><span>No se pudo cargar la captura</span><label for="modalFileInput' + index + '" style="margin-top:14px;display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border-radius:999px;background:var(--purple);color:#fff;font-size:12px;font-weight:700;cursor:pointer">&#8682; Subir imagen manual</label><a href="' + step.url + '" target="_blank" style="margin-top:12px;color:var(--purple);font-size:12px;text-decoration:underline">' + step.url + '</a></div><input type="file" id="modalFileInput' + index + '" accept="image/*" style="display:none">';
+          setTimeout(() => { const fi = document.getElementById('modalFileInput' + index); if (fi) fi.addEventListener('change', e => { handleFileUpload(index, e.target.files[0]); openModal(index); e.target.value = ''; }); }, 50);
+        };
+        img.src = getScreenshotUrl(step.url, 1400, 900);
+        img.alt = 'Vista ampliada: ' + step.name;
+        img.style.cssText = 'width:100%;display:block';
+      }
       modal.classList.add('visible');
       document.body.style.overflow = 'hidden';
-      const img = new Image();
-      img.onload = () => { body.innerHTML = ''; body.appendChild(img); };
-      img.onerror = () => {
-        body.innerHTML = `<div class="shot-placeholder" style="min-height:400px"><div class="shot-placeholder-icon">&#9634;</div><span>No se pudo cargar la captura</span><a href="${step.url}" target="_blank" style="margin-top:12px;color:var(--purple);font-size:12px;text-decoration:underline">${step.url}</a></div>`;
-      };
-      img.src = getScreenshotUrl(step.url, 1400, 900);
-      img.alt = `Vista ampliada: ${step.name}`;
-      img.style.width = '100%';
-      img.style.display = 'block';
     }
 
     function closeModal() {
@@ -860,7 +976,7 @@
       renderFlowStrip();
       renderScreenshots();
       document.getElementById('refreshAll').addEventListener('click', () => {
-        funnelSteps.forEach((_, i) => loadScreenshot(i));
+        funnelSteps.forEach((_, i) => { removeStoredImage(i); loadScreenshot(i); });
       });
       document.getElementById('openAllUrls').addEventListener('click', () => {
         funnelSteps.forEach(step => window.open(step.url, '_blank'));
@@ -878,16 +994,14 @@
         document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
         tab.classList.add('active');
         tab.setAttribute('aria-selected', 'true');
-        document.getElementById(`panel-${tab.dataset.view}`).classList.add('active');
+        document.getElementById('panel-' + tab.dataset.view).classList.add('active');
         if (tab.dataset.view === 'screenshots' && !document.querySelector('.shot-card')) {
           initScreenshotView();
         }
       });
     });
 
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') closeModal();
-    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
   </script>
 </body>
 </html>
