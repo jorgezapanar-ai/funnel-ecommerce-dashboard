@@ -205,7 +205,7 @@
 
     .report-overlay { display: none; position: fixed; inset: 0; z-index: 200; background: rgba(21,24,20,.82); backdrop-filter: blur(10px); align-items: center; justify-content: center; padding: 24px; }
     .report-overlay.visible { display: flex; }
-    .report-modal { position: relative; width: min(560px, 100%); max-height: 90vh; background: var(--card); border-radius: 22px; overflow: hidden; box-shadow: 0 40px 100px rgba(0,0,0,.35); display: flex; flex-direction: column; }
+    .report-modal { position: relative; z-index: 201; width: min(560px, 100%); max-height: 90vh; background: var(--card); border-radius: 22px; overflow: hidden; box-shadow: 0 40px 100px rgba(0,0,0,.35); display: flex; flex-direction: column; }
     .report-head { display: flex; align-items: center; justify-content: space-between; padding: 22px 26px 18px; border-bottom: 1px solid var(--line); }
     .report-head h3 { margin: 0; font-size: 18px; letter-spacing: -.03em; display: flex; align-items: center; gap: 10px; }
     .report-head h3 .icon { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; background: var(--green); color: var(--mint); font-size: 14px; }
@@ -550,7 +550,7 @@
     </div>
 
     <div class="report-overlay" id="reportOverlay">
-      <div class="report-modal">
+      <div class="report-modal" id="reportModalBox">
         <div class="report-head">
           <h3><span class="icon">&#9993;</span>Enviar reporte de funnels</h3>
           <button class="report-close" id="reportClose" type="button" aria-label="Cerrar">&times;</button>
@@ -1088,12 +1088,13 @@
       });
     });
 
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); closeReportModal(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); closeReportModal(); } });
 
     /* ── Report Email ── */
     const EMAILJS_PUBLIC_KEY = 'YOUR_PUBLIC_KEY';
     const EMAILJS_SERVICE_ID = 'YOUR_SERVICE_ID';
     const EMAILJS_TEMPLATE_ID = 'YOUR_TEMPLATE_ID';
+    let reportOpen = false;
 
     try { emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY }); } catch(e) {}
 
@@ -1111,101 +1112,57 @@
       const cvrPrev = (prev.compra / Math.max(1, prev.inicio) * 100).toFixed(1);
       const cvrDelta = (cvrLast - cvrPrev).toFixed(1);
       const deltaSign = cvrDelta >= 0 ? '+' : '';
-      const deltaColor = cvrDelta >= 0 ? '#2e6c40' : '#ba554a';
       const rates = steps.slice(1).map((s, i) => totals[steps[i + 1].key] / Math.max(1, totals[steps[i].key]));
       const bottleneckIdx = rates.indexOf(Math.min(...rates));
-      const bottleneckName = `${steps[bottleneckIdx].short} → ${steps[bottleneckIdx + 1].short}`;
-      const testRates = [...rates]; testRates[bottleneckIdx] = Math.min(.999, rates[bottleneckIdx] + .01);
-      let sim = totals.inicio; testRates.forEach(r => sim *= r);
-      const oppGain = Math.round(sim - rates.reduce((v, r) => v * r, totals.inicio));
-      const scenarioRates = rates;
-      let projSales = totals.inicio; scenarioRates.forEach(r => projSales *= r);
+      const bottleneckName = steps[bottleneckIdx].short + ' \u2192 ' + steps[bottleneckIdx + 1].short;
+      const testRates = rates.slice(); testRates[bottleneckIdx] = Math.min(.999, rates[bottleneckIdx] + .01);
+      var sim = totals.inicio; testRates.forEach(function(r) { sim *= r; });
+      var oppGain = Math.round(sim - rates.reduce(function(v, r) { return v * r; }, totals.inicio));
+      var projSales = totals.inicio; rates.forEach(function(r) { projSales *= r; });
       projSales = Math.round(projSales);
-      const projRevenue = Math.round(projSales * Number(aov));
-      const funnelRows = steps.map((s, i) => {
-        const val = totals[s.key];
-        const rate = i === 0 ? '100%' : (rates[i - 1] * 100).toFixed(1) + '%';
-        return `<tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-size:13px;color:#333">${i + 1}. ${s.name}</td><td style="padding:8px 12px;border-bottom:1px solid #eee;font-size:13px;text-align:right;color:#555">${formatNumber.format(val)}</td><td style="padding:8px 12px;border-bottom:1px solid #eee;font-size:13px;text-align:right;font-weight:700;color:#173f35">${rate}</td></tr>`;
+      var projRevenue = Math.round(projSales * Number(aov));
+      var funnelRows = steps.map(function(s, i) {
+        var val = totals[s.key];
+        var rate = i === 0 ? '100%' : (rates[i - 1] * 100).toFixed(1) + '%';
+        return '<tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-size:13px;color:#333">' + (i + 1) + '. ' + s.name + '</td><td style="padding:8px 12px;border-bottom:1px solid #eee;font-size:13px;text-align:right;color:#555">' + formatNumber.format(val) + '</td><td style="padding:8px 12px;border-bottom:1px solid #eee;font-size:13px;text-align:right;font-weight:700;color:#173f35">' + rate + '</td></tr>';
       }).join('');
-      const monthlyRows = data.map(r => {
-        const m = monthNamesEs[r.month] || r.month;
-        return `<tr><td style="padding:6px 12px;border-bottom:1px solid #f0f0f0;font-size:12px;color:#555;text-transform:capitalize">${m}</td><td style="padding:6px 12px;border-bottom:1px solid #f0f0f0;font-size:12px;text-align:right;color:#555">${formatNumber.format(r.inicio)}</td><td style="padding:6px 12px;border-bottom:1px solid #f0f0f0;font-size:12px;text-align:right;color:#555">${formatNumber.format(r.compra)}</td><td style="padding:6px 12px;border-bottom:1px solid #f0f0f0;font-size:12px;text-align:right;color:#555">${(r.compra / Math.max(1, r.inicio) * 100).toFixed(1)}%</td><td style="padding:6px 12px;border-bottom:1px solid #f0f0f0;font-size:12px;text-align:right;color:#555">${formatMoney.format(r.ingresos)}</td></tr>`;
+      var monthlyRows = data.map(function(r) {
+        var m = monthNamesEs[r.month] || r.month;
+        return '<tr><td style="padding:6px 12px;border-bottom:1px solid #f0f0f0;font-size:12px;color:#555;text-transform:capitalize">' + m + '</td><td style="padding:6px 12px;border-bottom:1px solid #f0f0f0;font-size:12px;text-align:right;color:#555">' + formatNumber.format(r.inicio) + '</td><td style="padding:6px 12px;border-bottom:1px solid #f0f0f0;font-size:12px;text-align:right;color:#555">' + formatNumber.format(r.compra) + '</td><td style="padding:6px 12px;border-bottom:1px solid #f0f0f0;font-size:12px;text-align:right;color:#555">' + (r.compra / Math.max(1, r.inicio) * 100).toFixed(1) + '%</td><td style="padding:6px 12px;border-bottom:1px solid #f0f0f0;font-size:12px;text-align:right;color:#555">' + formatMoney.format(r.ingresos) + '</td></tr>';
       }).join('');
-      return `
-      <div style="font-family:Inter,system-ui,sans-serif;max-width:640px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e5e5e5">
-        <div style="background:#151814;padding:28px 32px;color:#fff">
-          <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#bff39a;margin-bottom:10px">Reporte de Funnel · Avinka Delivery</div>
-          <div style="font-size:26px;font-weight:800;letter-spacing:-.04em;line-height:1.1">Resumen Enero — Julio 2026</div>
-          <div style="margin-top:8px;font-size:13px;color:#a9aea5">Generado ${new Date().toLocaleDateString('es-PE', { day:'2-digit', month:'long', year:'numeric' })}</div>
-        </div>
-        <div style="padding:28px 32px">
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:28px">
-            <div style="padding:14px;background:#f8f7f1;border-radius:10px"><div style="font-size:10px;color:#6b7068;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Compras</div><div style="font-size:22px;font-weight:800;margin-top:4px;color:#151814">${formatNumber.format(totalSales)}</div></div>
-            <div style="padding:14px;background:#f8f7f1;border-radius:10px"><div style="font-size:10px;color:#6b7068;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Conversi&#243;n</div><div style="font-size:22px;font-weight:800;margin-top:4px;color:#7656d6">${totalCvr}%</div></div>
-            <div style="padding:14px;background:#f8f7f1;border-radius:10px"><div style="font-size:10px;color:#6b7068;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Ingresos</div><div style="font-size:22px;font-weight:800;margin-top:4px;color:#f39a62">${formatMoney.format(totalRevenue)}</div></div>
-            <div style="padding:14px;background:#f8f7f1;border-radius:10px"><div style="font-size:10px;color:#6b7068;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Ticket</div><div style="font-size:22px;font-weight:800;margin-top:4px;color:#151814">S/ ${aov}</div></div>
-          </div>
-
-          <div style="margin-bottom:24px">
-            <div style="font-size:13px;font-weight:800;color:#151814;margin-bottom:10px">Funnel acumulado 7 meses</div>
-            <table style="width:100%;border-collapse:collapse"><tbody>${funnelRows}</tbody></table>
-          </div>
-
-          <div style="padding:18px;background:#ede8fb;border-radius:12px;margin-bottom:24px">
-            <div style="font-size:10px;color:#7656d6;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px">Mayor oportunidad</div>
-            <div style="font-size:17px;font-weight:800;color:#151814">${bottleneckName}</div>
-            <div style="font-size:13px;color:#665e77;margin-top:4px">+1 pp en esta transici&#243;n = <b style="color:#173f35">${formatNumber.format(oppGain)} ventas</b> adicionales manteniendo el mismo tr&#225;fico.</div>
-          </div>
-
-          <div style="margin-bottom:24px">
-            <div style="font-size:13px;font-weight:800;color:#151814;margin-bottom:10px">Evoluci&#243;n mensual</div>
-            <table style="width:100%;border-collapse:collapse">
-              <thead><tr><th style="padding:8px 12px;text-align:left;font-size:10px;color:#6b7068;font-weight:700;text-transform:uppercase;border-bottom:2px solid #e5e5e5">Mes</th><th style="padding:8px 12px;text-align:right;font-size:10px;color:#6b7068;font-weight:700;text-transform:uppercase;border-bottom:2px solid #e5e5e5">Tr&#225;fico</th><th style="padding:8px 12px;text-align:right;font-size:10px;color:#6b7068;font-weight:700;text-transform:uppercase;border-bottom:2px solid #e5e5e5">Compras</th><th style="padding:8px 12px;text-align:right;font-size:10px;color:#6b7068;font-weight:700;text-transform:uppercase;border-bottom:2px solid #e5e5e5">CVR</th><th style="padding:8px 12px;text-align:right;font-size:10px;color:#6b7068;font-weight:700;text-transform:uppercase;border-bottom:2px solid #e5e5e5">Ingresos</th></tr></thead>
-              <tbody>${monthlyRows}</tbody>
-            </table>
-          </div>
-
-          <div style="padding:18px;background:#f0edfa;border-radius:12px;margin-bottom:24px">
-            <div style="font-size:10px;color:#7656d6;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px">Proyecci&#243;n con tasas actuales</div>
-            <div style="font-size:28px;font-weight:800;color:#151814">${formatNumber.format(projSales)} <span style="font-size:13px;font-weight:600;color:#5e5770">ventas</span></div>
-            <div style="font-size:14px;color:#5e5770;margin-top:4px">${formatMoney.format(projRevenue)} de ingreso estimado</div>
-          </div>
-
-          <div style="font-size:12px;color:#6b7068;line-height:1.6">
-            <b>Conversi&#243;n ${lastLabel} vs ${prevLabel}:</b> ${deltaSign}${cvrDelta} pp<br>
-            <b>Tr&#225;fico ${lastLabel}:</b> ${formatNumber.format(last.inicio)} sesiones<br>
-            <b>Modelo:</b> Tasas secuenciales sobre el mismo volumen de inicios. Sin estacionalidad ni inventario.
-          </div>
-        </div>
-        <div style="padding:16px 32px;background:#f8f7f1;border-top:1px solid #e5e5e5;font-size:10px;color:#999;text-align:center">
-          Growth Console · Avinka Delivery · Generadoautom&#225;ticamente desde el dashboard de funnels
-        </div>
-      </div>`;
+      return '<div style="font-family:Inter,system-ui,sans-serif;max-width:640px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e5e5e5">' +
+        '<div style="background:#151814;padding:28px 32px;color:#fff"><div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#bff39a;margin-bottom:10px">Reporte de Funnel \u00b7 Avinka Delivery</div><div style="font-size:26px;font-weight:800;letter-spacing:-.04em;line-height:1.1">Resumen Enero \u2014 Julio 2026</div><div style="margin-top:8px;font-size:13px;color:#a9aea5">Generado ' + new Date().toLocaleDateString('es-PE', { day:'2-digit', month:'long', year:'numeric' }) + '</div></div>' +
+        '<div style="padding:28px 32px">' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:28px"><div style="padding:14px;background:#f8f7f1;border-radius:10px"><div style="font-size:10px;color:#6b7068;font-weight:700;text-transform:uppercase">Compras</div><div style="font-size:22px;font-weight:800;margin-top:4px;color:#151814">' + formatNumber.format(totalSales) + '</div></div><div style="padding:14px;background:#f8f7f1;border-radius:10px"><div style="font-size:10px;color:#6b7068;font-weight:700;text-transform:uppercase">Conversi\u00f3n</div><div style="font-size:22px;font-weight:800;margin-top:4px;color:#7656d6">' + totalCvr + '%</div></div><div style="padding:14px;background:#f8f7f1;border-radius:10px"><div style="font-size:10px;color:#6b7068;font-weight:700;text-transform:uppercase">Ingresos</div><div style="font-size:22px;font-weight:800;margin-top:4px;color:#f39a62">' + formatMoney.format(totalRevenue) + '</div></div><div style="padding:14px;background:#f8f7f1;border-radius:10px"><div style="font-size:10px;color:#6b7068;font-weight:700;text-transform:uppercase">Ticket</div><div style="font-size:22px;font-weight:800;margin-top:4px;color:#151814">S/ ' + aov + '</div></div></div>' +
+        '<div style="margin-bottom:24px"><div style="font-size:13px;font-weight:800;color:#151814;margin-bottom:10px">Funnel acumulado 7 meses</div><table style="width:100%;border-collapse:collapse"><tbody>' + funnelRows + '</tbody></table></div>' +
+        '<div style="padding:18px;background:#ede8fb;border-radius:12px;margin-bottom:24px"><div style="font-size:10px;color:#7656d6;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px">Mayor oportunidad</div><div style="font-size:17px;font-weight:800;color:#151814">' + bottleneckName + '</div><div style="font-size:13px;color:#665e77;margin-top:4px">+1 pp en esta transici\u00f3n = <b style="color:#173f35">' + formatNumber.format(oppGain) + ' ventas</b> adicionales.</div></div>' +
+        '<div style="margin-bottom:24px"><div style="font-size:13px;font-weight:800;color:#151814;margin-bottom:10px">Evoluci\u00f3n mensual</div><table style="width:100%;border-collapse:collapse"><thead><tr><th style="padding:8px 12px;text-align:left;font-size:10px;color:#6b7068;font-weight:700;text-transform:uppercase;border-bottom:2px solid #e5e5e5">Mes</th><th style="padding:8px 12px;text-align:right;font-size:10px;color:#6b7068;font-weight:700;text-transform:uppercase;border-bottom:2px solid #e5e5e5">Tr\u00e1fico</th><th style="padding:8px 12px;text-align:right;font-size:10px;color:#6b7068;font-weight:700;text-transform:uppercase;border-bottom:2px solid #e5e5e5">Compras</th><th style="padding:8px 12px;text-align:right;font-size:10px;color:#6b7068;font-weight:700;text-transform:uppercase;border-bottom:2px solid #e5e5e5">CVR</th><th style="padding:8px 12px;text-align:right;font-size:10px;color:#6b7068;font-weight:700;text-transform:uppercase;border-bottom:2px solid #e5e5e5">Ingresos</th></tr></thead><tbody>' + monthlyRows + '</tbody></table></div>' +
+        '<div style="padding:18px;background:#f0edfa;border-radius:12px;margin-bottom:24px"><div style="font-size:10px;color:#7656d6;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px">Proyecci\u00f3n con tasas actuales</div><div style="font-size:28px;font-weight:800;color:#151814">' + formatNumber.format(projSales) + ' <span style="font-size:13px;font-weight:600;color:#5e5770">ventas</span></div><div style="font-size:14px;color:#5e5770;margin-top:4px">' + formatMoney.format(projRevenue) + ' de ingreso estimado</div></div>' +
+        '<div style="font-size:12px;color:#6b7068;line-height:1.6"><b>Conversi\u00f3n ' + lastLabel + ' vs ' + prevLabel + ':</b> ' + deltaSign + cvrDelta + ' pp<br><b>Tr\u00e1fico ' + lastLabel + ':</b> ' + formatNumber.format(last.inicio) + ' sesiones</div></div>' +
+        '<div style="padding:16px 32px;background:#f8f7f1;border-top:1px solid #e5e5e5;font-size:10px;color:#999;text-align:center">Growth Console \u00b7 Avinka Delivery</div></div>';
     }
 
     function renderReportPreview() {
-      const last = data[data.length - 1];
-      const prev = data.length > 1 ? data[data.length - 2] : last;
-      const totalSales = totals.compra;
-      const totalRevenue = totals.ingresos;
-      const totalCvr = (totalSales / Math.max(1, totals.inicio) * 100).toFixed(1);
-      const aov = (totalRevenue / Math.max(1, totalSales)).toFixed(0);
-      const rates = steps.slice(1).map((s, i) => totals[steps[i + 1].key] / Math.max(1, totals[steps[i].key]));
-      document.getElementById('reportKpis').innerHTML = `
-        <div class="report-kpi-mini"><span>Compras</span><strong>${formatNumber.format(totalSales)}</strong></div>
-        <div class="report-kpi-mini"><span>Conversi&#243;n</span><strong>${totalCvr}%</strong></div>
-        <div class="report-kpi-mini"><span>Ingresos</span><strong>${formatMoney.format(totalRevenue)}</strong></div>
-        <div class="report-kpi-mini"><span>Ticket</span><strong>S/ ${aov}</strong></div>`;
-      document.getElementById('reportFunnel').innerHTML = steps.map((s, i) => {
-        const val = totals[s.key];
-        const rate = i === 0 ? 'Base' : (rates[i - 1] * 100).toFixed(1) + '%';
-        return `<div class="report-step-row"><span class="name">${s.name}</span><span class="val">${formatNumber.format(val)}</span><span class="rate">${rate}</span></div>`;
+      var last = data[data.length - 1];
+      var totalSales = totals.compra;
+      var totalRevenue = totals.ingresos;
+      var totalCvr = (totalSales / Math.max(1, totals.inicio) * 100).toFixed(1);
+      var aov = (totalRevenue / Math.max(1, totalSales)).toFixed(0);
+      var rates = steps.slice(1).map(function(s, i) { return totals[steps[i + 1].key] / Math.max(1, totals[steps[i].key]); });
+      document.getElementById('reportKpis').innerHTML = '<div class="report-kpi-mini"><span>Compras</span><strong>' + formatNumber.format(totalSales) + '</strong></div><div class="report-kpi-mini"><span>Conversi\u00f3n</span><strong>' + totalCvr + '%</strong></div><div class="report-kpi-mini"><span>Ingresos</span><strong>' + formatMoney.format(totalRevenue) + '</strong></div><div class="report-kpi-mini"><span>Ticket</span><strong>S/ ' + aov + '</strong></div>';
+      document.getElementById('reportFunnel').innerHTML = steps.map(function(s, i) {
+        var val = totals[s.key];
+        var rate = i === 0 ? 'Base' : (rates[i - 1] * 100).toFixed(1) + '%';
+        return '<div class="report-step-row"><span class="name">' + s.name + '</span><span class="val">' + formatNumber.format(val) + '</span><span class="rate">' + rate + '</span></div>';
       }).join('');
     }
 
     function openReportModal() {
+      if (reportOpen) return;
+      reportOpen = true;
       renderReportPreview();
-      document.getElementById('reportOverlay').classList.add('visible');
+      var overlay = document.getElementById('reportOverlay');
+      overlay.classList.add('visible');
       document.getElementById('reportFormBody').style.display = '';
       document.getElementById('reportSuccess').classList.remove('visible');
       document.getElementById('reportFoot').style.display = '';
@@ -1213,22 +1170,58 @@
       document.getElementById('reportTo').value = '';
       document.getElementById('reportMessage').value = '';
       document.body.style.overflow = 'hidden';
-      setTimeout(() => document.getElementById('reportTo').focus(), 100);
+      setTimeout(function() { document.getElementById('reportTo').focus(); }, 150);
     }
 
     function closeReportModal() {
+      if (!reportOpen) return;
+      reportOpen = false;
       document.getElementById('reportOverlay').classList.remove('visible');
       document.body.style.overflow = '';
     }
 
+    document.getElementById('openReportBtn').addEventListener('click', function(e) {
+      e.stopPropagation();
+      openReportModal();
+    });
+
+    document.getElementById('reportClose').addEventListener('click', function(e) {
+      e.stopPropagation();
+      closeReportModal();
+    });
+
+    document.getElementById('reportSuccessClose').addEventListener('click', function(e) {
+      e.stopPropagation();
+      closeReportModal();
+    });
+
+    document.getElementById('reportOverlay').addEventListener('click', function(e) {
+      if (e.target === this) closeReportModal();
+    });
+
+    document.getElementById('reportModalBox') && document.getElementById('reportModalBox').addEventListener('click', function(e) {
+      e.stopPropagation();
+    });
+
+    document.getElementById('reportTo').addEventListener('click', function(e) { e.stopPropagation(); });
+    document.getElementById('reportSubject').addEventListener('click', function(e) { e.stopPropagation(); });
+    document.getElementById('reportMessage').addEventListener('click', function(e) { e.stopPropagation(); });
+    document.getElementById('reportTo').addEventListener('focus', function(e) { e.stopPropagation(); });
+    document.getElementById('reportSubject').addEventListener('focus', function(e) { e.stopPropagation(); });
+    document.getElementById('reportMessage').addEventListener('focus', function(e) { e.stopPropagation(); });
+
+    document.getElementById('reportSendBtn').addEventListener('click', function(e) {
+      e.stopPropagation();
+      sendReport();
+    });
+
     async function sendReport() {
-      const toEmail = document.getElementById('reportTo').value.trim();
-      const subject = document.getElementById('reportSubject').value.trim();
-      const message = document.getElementById('reportMessage').value.trim();
-      const errorEl = document.getElementById('reportError');
-      const sendBtn = document.getElementById('reportSendBtn');
+      var toEmail = document.getElementById('reportTo').value.trim();
+      var subject = document.getElementById('reportSubject').value.trim();
+      var errorEl = document.getElementById('reportError');
+      var sendBtn = document.getElementById('reportSendBtn');
       if (!toEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(toEmail)) {
-        errorEl.textContent = 'Ingresa un correo v&#225;lido.';
+        errorEl.textContent = 'Ingresa un correo v\u00e1lido.';
         errorEl.classList.add('visible');
         return;
       }
@@ -1236,40 +1229,34 @@
       sendBtn.classList.add('loading');
       sendBtn.disabled = true;
       try {
-        const htmlBody = buildEmailHtml();
+        var htmlBody = buildEmailHtml();
         if (EMAILJS_PUBLIC_KEY === 'YOUR_PUBLIC_KEY') {
-          await new Promise(r => setTimeout(r, 1200));
-          const mailtoLink = `mailto:${toEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent('Reporte de Funnel Avinka Delivery\\n\\nResumen: ' + totals.compra + ' compras, conversión ' + (totals.compra / Math.max(1, totals.inicio) * 100).toFixed(1) + '%, ingresos ' + formatMoney.format(totals.ingresos) + '\\n\\nAbre el dashboard para ver el reporte completo.')}`;
-          window.open(mailtoLink);
+          await new Promise(function(r) { setTimeout(r, 1000); });
+          var mailtoLink = 'mailto:' + toEmail + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent('Reporte de Funnel Avinka Delivery\n\nCompras: ' + totals.compra + ' | Conversi\u00f3n: ' + (totals.compra / Math.max(1, totals.inicio) * 100).toFixed(1) + '% | Ingresos: ' + formatMoney.format(totals.ingresos) + '\n\nAbre el dashboard para ver el reporte completo.');
+          window.location.href = mailtoLink;
           document.getElementById('reportFormBody').style.display = 'none';
           document.getElementById('reportFoot').style.display = 'none';
           document.getElementById('reportSuccess').classList.add('visible');
-          document.getElementById('reportSuccess').querySelector('p').textContent = 'Se abrió tu cliente de correo con el resumen. Configura EmailJS para envío automático.';
+          document.getElementById('reportSuccess').querySelector('p').textContent = 'Se abri\u00f3 tu cliente de correo con el resumen. Configura EmailJS para env\u00edo autom\u00e1tico.';
           return;
         }
         await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
           to_email: toEmail,
           subject: subject,
           message_html: htmlBody,
-          dashboard_summary: `Compras: ${totals.compra} | Conversión: ${(totals.compra / Math.max(1, totals.inicio) * 100).toFixed(1)}% | Ingresos: ${formatMoney.format(totals.ingresos)}`
+          dashboard_summary: 'Compras: ' + totals.compra + ' | Conversi\u00f3n: ' + (totals.compra / Math.max(1, totals.inicio) * 100).toFixed(1) + '% | Ingresos: ' + formatMoney.format(totals.ingresos)
         });
         document.getElementById('reportFormBody').style.display = 'none';
         document.getElementById('reportFoot').style.display = 'none';
         document.getElementById('reportSuccess').classList.add('visible');
       } catch (err) {
-        errorEl.textContent = 'Error al enviar: ' + (err.text || err.message || 'Verifica la configuración de EmailJS.');
+        errorEl.textContent = 'Error al enviar: ' + (err.text || err.message || 'Verifica la configuraci\u00f3n de EmailJS.');
         errorEl.classList.add('visible');
       } finally {
         sendBtn.classList.remove('loading');
         sendBtn.disabled = false;
       }
     }
-
-    document.getElementById('openReportBtn').addEventListener('click', openReportModal);
-    document.getElementById('reportClose').addEventListener('click', closeReportModal);
-    document.getElementById('reportSuccessClose').addEventListener('click', closeReportModal);
-    document.getElementById('reportOverlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeReportModal(); });
-    document.getElementById('reportSendBtn').addEventListener('click', sendReport);
   </script>
 </body>
 </html>
