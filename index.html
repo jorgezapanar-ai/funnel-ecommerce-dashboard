@@ -359,16 +359,16 @@
     <div class="top-actions">
       <span class="live-dot">Datos de ejemplo</span>
       <select class="control" aria-label="Periodo del dashboard"><option>Últimos 30 días</option></select>
-      <a class="download" href="funnel_data.csv" download>↓ Descargar CSV</a>
+      <a class="download" href="data_funnel.csv" download>↓ Descargar CSV</a>
     </div>
   </header>
 
   <main class="shell">
     <section class="hero">
       <div>
-        <p class="eyebrow">Control de conversión · 19 jul — 17 ago 2026</p>
+        <p class="eyebrow">Control de conversi&#243;n &middot; enero — julio 2026</p>
         <h1>Convierte fugas en crecimiento.</h1>
-        <p class="hero-copy">Una vista de control para entender dónde se pierde intención, cómo evoluciona cada transición y qué impacto tendría mover una tasa antes de invertir más en tráfico.</p>
+        <p class="hero-copy">Una vista de control para entender d&#243;nde se pierde intenci&#243;n, c&#243;mo evoluciona cada transici&#243;n y qu&#233; impacto tendr&#237;a mover una tasa antes de invertir m&#225;s en tr&#225;fico.</p>
       </div>
       <aside class="hero-note">
         <div class="hero-note-label">Señal prioritaria</div>
@@ -388,8 +388,8 @@
       <section class="layout-grid">
         <article class="card">
           <div class="card-head">
-            <div><h2>Funnel de conversi&#243;n</h2><p>Volumen, conversi&#243;n al paso siguiente y cambio vs. los 7 d&#237;as anteriores.</p></div>
-            <span class="mini-tag">Vista 30d</span>
+            <div><h2>Funnel de conversi&#243;n</h2><p>Volumen, conversi&#243;n al paso siguiente y cambio vs. el mes anterior.</p></div>
+            <span class="mini-tag">Vista 7m</span>
           </div>
           <div class="funnel" id="funnel"></div>
         </article>
@@ -405,8 +405,8 @@
 
       <section class="card trend-card">
         <div class="card-head">
-          <div><h2>Tendencia entre pasos</h2><p>Selecciona una transici&#243;n para ver su comportamiento diario y promedio m&#243;vil de 7 d&#237;as.</p></div>
-          <span class="mini-tag">Tasa diaria</span>
+          <div><h2>Tendencia mensual</h2><p>Selecciona una transici&#243;n para ver su evoluci&#243;n mensual y promedio m&#243;vil de 3 meses.</p></div>
+          <span class="mini-tag">Tasa mensual</span>
         </div>
         <div class="transition-tabs" id="transitionTabs" role="tablist" aria-label="Transiciones del funnel"></div>
         <div class="trend-body">
@@ -414,7 +414,7 @@
             <span id="trendLabel">Conversi&#243;n promedio</span>
             <strong class="mono" id="trendValue">&mdash;</strong>
             <p id="trendNote">&mdash;</p>
-            <div class="legend"><span><i></i> Diario</span><span class="avg"><i></i> Media 7d</span></div>
+            <div class="legend"><span><i></i> Mensual</span><span class="avg"><i></i> Media 3m</span></div>
           </div>
           <div class="chart-wrap"><svg id="trendChart" viewBox="0 0 820 245" role="img" aria-label="Gr&#225;fico de tendencia de conversi&#243;n"></svg></div>
         </div>
@@ -446,8 +446,8 @@
 
       <section class="bottom-grid">
         <article class="card">
-          <div class="card-head"><div><h2>&Uacute;ltimos 7 d&#237;as</h2><p>Volumen diario por etapa para detectar quiebres operativos.</p></div></div>
-          <div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Inicio</th><th>Producto</th><th>Carrito</th><th>Datos</th><th>Pago</th><th>Venta</th></tr></thead><tbody id="dailyTable"></tbody></table></div>
+          <div class="card-head"><div><h2>Evoluci&#243;n mensual</h2><p>Volumen mensual por etapa para detectar tendencias y quiebres.</p></div></div>
+          <div class="table-wrap"><table><thead><tr><th>Mes</th><th>Inicio</th><th>Producto</th><th>Carrito</th><th>Pago</th><th>Compra</th></tr></thead><tbody id="dailyTable"></tbody></table></div>
         </article>
         <aside class="card method">
           <h3>C&#243;mo usar esta vista</h3>
@@ -494,50 +494,27 @@
       </div>
     </div>
 
-    <footer class="footer"><span>Fuente: funnel_data.csv · datos ficticios con fines de diseño.</span><span>Growth Console / Ecommerce Conversion OS</span></footer>
+    <footer class="footer"><span>Fuente: Data funnel enero–julio 2026 · Avinka Delivery.</span><span>Growth Console / Ecommerce Conversion OS</span></footer>
   </main>
 
   <script>
-    const fallbackCsv = `fecha,inicio,ficha_producto,agregar_carrito,datos_personales,pagar,venta_confirmada,ingresos
-2026-07-19,4180,2810,842,574,421,365,28764
-2026-07-20,4360,2948,901,612,454,392,30968
-2026-07-21,4525,3092,938,647,476,409,32720
-2026-07-22,4470,3018,915,626,461,398,31562
-2026-07-23,4680,3198,972,664,492,427,34245
-2026-07-24,5050,3486,1076,742,552,481,39057
-2026-07-25,5380,3722,1168,811,603,528,43296
-2026-07-26,5220,3588,1109,768,567,492,40147
-2026-07-27,4610,3156,965,668,493,429,34749
-2026-07-28,4725,3254,1008,697,518,451,36531
-2026-07-29,4890,3390,1052,731,541,471,38252
-2026-07-30,4975,3467,1087,752,559,486,39522
-2026-07-31,5150,3605,1141,795,592,516,42146
-2026-08-01,5540,3902,1258,884,664,579,47612
-2026-08-02,5410,3788,1217,851,636,553,45431
-2026-08-03,4820,3371,1056,738,551,478,38974
-2026-08-04,4935,3474,1102,770,577,501,40982
-2026-08-05,5060,3589,1155,811,607,529,43404
-2026-08-06,5190,3708,1199,846,635,554,45648
-2026-08-07,5350,3842,1256,889,669,585,48321
-2026-08-08,5760,4181,1394,991,748,655,54562
-2026-08-09,5635,4076,1351,956,722,632,52683
-2026-08-10,5015,3628,1164,823,620,541,44957
-2026-08-11,5140,3744,1212,861,650,568,47428
-2026-08-12,5275,3868,1263,900,681,596,49904
-2026-08-13,5390,3975,1308,935,709,621,52270
-2026-08-14,5575,4136,1374,987,751,659,55743
-2026-08-15,6020,4510,1521,1098,838,736,62627
-2026-08-16,5890,4392,1476,1061,806,707,60184
-2026-08-17,5480,4108,1398,1012,771,678,58142`;
+    const fallbackCsv = `year,month,inicio,ficha_producto,agregar_carrito,pagar,compra,ingresos
+2026,enero,16553,3714,988,792,559,99842
+2026,febrero,33396,21747,4569,3215,2334,416915
+2026,marzo,45267,30492,7419,4812,3558,621753
+2026,abril,42769,26198,5504,3720,2823,513590
+2026,mayo,37941,22927,5131,3705,2914,548595
+2026,junio,32745,21685,5552,3993,3198,596875
+2026,julio,39318,25113,5652,3872,3000,559116`;
 
     const steps = [
       { key: 'inicio', name: 'Inicio', short: 'Inicio' },
       { key: 'ficha_producto', name: 'Ficha de producto', short: 'Producto' },
       { key: 'agregar_carrito', name: 'Agregar a carrito', short: 'Carrito' },
-      { key: 'datos_personales', name: 'Ingresar datos personales', short: 'Datos' },
       { key: 'pagar', name: 'Pagar', short: 'Pago' },
-      { key: 'venta_confirmada', name: 'Venta confirmada', short: 'Venta' }
+      { key: 'compra', name: 'Compra confirmada', short: 'Compra' }
     ];
+    const monthNames = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
     let data = [];
     let totals = {};
     let baseRates = [];
@@ -548,11 +525,17 @@
     const sum = (rows, key) => rows.reduce((acc, row) => acc + Number(row[key] || 0), 0);
 
     function parseCsv(text) {
-      const [header, ...rows] = text.trim().split(/\r?\n/);
-      const keys = header.split(',');
+      const lines = text.trim().split(/\r?\n/).filter(l => l.trim());
+      const sep = lines[0].includes(';') ? ';' : ',';
+      const [header, ...rows] = lines;
+      const keys = header.split(sep).map(k => k.trim());
       return rows.map(line => {
-        const values = line.split(',');
-        return Object.fromEntries(keys.map((key, index) => [key, key === 'fecha' ? values[index] : Number(values[index])]));
+        const values = line.split(sep).map(v => v.trim());
+        return Object.fromEntries(keys.map((key, index) => {
+          const val = values[index] || '';
+          if (key === 'year' || key === 'month') return [key, val];
+          return [key, Number(val.replace(/\./g, '').replace(/S\//g, '').replace(/,/g, '').trim()) || 0];
+        }));
       });
     }
 
@@ -561,35 +544,39 @@
     }
 
     function periodDelta(index) {
-      if (index === 0) return 0;
-      const current = data.slice(-7);
-      const previous = data.slice(-14, -7);
-      return (rateFor(current, index) - rateFor(previous, index)) * 100;
+      if (index === 0 || data.length < 2) return 0;
+      const current = data[data.length - 1];
+      const previous = data[data.length - 2];
+      const curRate = current[steps[index].key] / Math.max(1, current[steps[index - 1].key]);
+      const prevRate = previous[steps[index].key] / Math.max(1, previous[steps[index - 1].key]);
+      return (curRate - prevRate) * 100;
     }
 
     function renderKpis() {
-      const sales = totals.venta_confirmada;
+      const sales = totals.compra;
       const revenue = totals.ingresos;
       const cvr = sales / totals.inicio;
       const rpv = revenue / totals.inicio;
-      const recentSales = sum(data.slice(-7), 'venta_confirmada');
-      const previousSales = sum(data.slice(-14, -7), 'venta_confirmada');
-      const recentRevenue = sum(data.slice(-7), 'ingresos');
-      const previousRevenue = sum(data.slice(-14, -7), 'ingresos');
-      const recentCvr = recentSales / sum(data.slice(-7), 'inicio');
-      const previousCvr = previousSales / sum(data.slice(-14, -7), 'inicio');
-      const recentRpv = recentRevenue / sum(data.slice(-7), 'inicio');
-      const previousRpv = previousRevenue / sum(data.slice(-14, -7), 'inicio');
+      const lastMonth = data[data.length - 1];
+      const prevMonth = data.length > 1 ? data[data.length - 2] : lastMonth;
+      const lastSales = lastMonth.compra;
+      const prevSales = prevMonth.compra || 1;
+      const lastRevenue = lastMonth.ingresos;
+      const prevRevenue = prevMonth.ingresos || 1;
+      const lastCvr = lastMonth.compra / Math.max(1, lastMonth.inicio);
+      const prevCvr = prevMonth.compra / Math.max(1, prevMonth.inicio);
+      const lastRpv = lastMonth.ingresos / Math.max(1, lastMonth.inicio);
+      const prevRpv = prevMonth.ingresos / Math.max(1, prevMonth.inicio);
       const cards = [
-        ['Ventas confirmadas', formatNumber.format(sales), (recentSales / previousSales - 1) * 100, 'Últimos 30 días', '#173f35'],
-        ['Conversión total', pct(cvr), (recentCvr - previousCvr) * 100, 'Inicio → venta', '#7656d6'],
-        ['Ingreso observado', formatMoney.format(revenue), (recentRevenue / previousRevenue - 1) * 100, 'Facturación acumulada', '#f39a62'],
-        ['Ingreso por visita', formatMoney.format(rpv), (recentRpv / previousRpv - 1) * 100, 'Valor generado por inicio', '#7a9c61']
+        ['Compras confirmadas', formatNumber.format(sales), (lastSales / prevSales - 1) * 100, 'Ene — Jul 2026', '#173f35'],
+        ['Conversi&#243;n total', pct(cvr), (lastCvr - prevCvr) * 100, 'Inicio → compra', '#7656d6'],
+        ['Ingreso observado', formatMoney.format(revenue), (lastRevenue / prevRevenue - 1) * 100, 'Facturaci&#243;n acumulada', '#f39a62'],
+        ['Ingreso por visita', formatMoney.format(rpv), (lastRpv / prevRpv - 1) * 100, 'Valor generado por inicio', '#7a9c61']
       ];
       document.getElementById('kpis').innerHTML = cards.map(([label, value, delta, foot, color]) => `
         <article class="kpi" style="--accent:${color}">
-          <div class="kpi-top"><span>${label}</span><span class="delta ${delta < 0 ? 'negative' : ''}">${delta >= 0 ? '↗' : '↘'} ${Math.abs(delta).toFixed(1)}${label === 'Conversión total' ? ' pp' : '%'}</span></div>
-          <div class="kpi-value mono">${value}</div><div class="kpi-foot">${foot} · vs. 7d previos</div>
+          <div class="kpi-top"><span>${label}</span><span class="delta ${delta < 0 ? 'negative' : ''}">${delta >= 0 ? '&#8599;' : '&#8600;'} ${Math.abs(delta).toFixed(1)}${label.includes('Conversi') ? ' pp' : '%'}</span></div>
+          <div class="kpi-value mono">${value}</div><div class="kpi-foot">${foot} &middot; vs. mes anterior</div>
         </article>`).join('');
     }
 
@@ -600,7 +587,7 @@
         const rate = index === 0 ? 1 : value / totals[steps[index - 1].key];
         const delta = periodDelta(index);
         const width = 14 + 86 * Math.pow(value / max, .55);
-        const lost = index === 0 ? 'Sesiones registradas' : `${formatNumber.format(totals[steps[index - 1].key] - value)} no avanzaron`;
+        const lost = index === 0 ? 'Sesiones totales' : `${formatNumber.format(totals[steps[index - 1].key] - value)} no continuaron`;
         return `<div class="funnel-step">
           <div class="step-index">0${index + 1}</div>
           <div class="step-name"><strong>${step.name}</strong><span>${lost}</span></div>
@@ -643,7 +630,7 @@
       }));
     }
 
-    function movingAverage(values, windowSize = 7) {
+    function movingAverage(values, windowSize = 3) {
       return values.map((_, index) => {
         const start = Math.max(0, index - windowSize + 1);
         const slice = values.slice(start, index + 1);
@@ -653,12 +640,12 @@
 
     function renderTrend() {
       const i = selectedTransition;
-      const values = data.map(row => row[steps[i].key] / row[steps[i - 1].key]);
+      const values = data.map(row => row[steps[i].key] / Math.max(1, row[steps[i - 1].key]));
       const averages = movingAverage(values);
       const min = Math.min(...values, ...averages) - .01;
       const max = Math.max(...values, ...averages) + .01;
       const width = 820, height = 245, padX = 42, padY = 24;
-      const x = index => padX + index * ((width - padX * 2) / (values.length - 1));
+      const x = index => padX + index * ((width - padX * 2) / Math.max(1, values.length - 1));
       const y = value => height - padY - ((value - min) / (max - min)) * (height - padY * 2);
       const points = arr => arr.map((value, index) => `${x(index).toFixed(1)},${y(value).toFixed(1)}`).join(' ');
       const grid = [0, .25, .5, .75, 1].map(part => {
@@ -666,14 +653,21 @@
         const label = max - part * (max - min);
         return `<line x1="${padX}" y1="${yy}" x2="${width - padX}" y2="${yy}" stroke="#dedbd3" stroke-dasharray="3 5"/><text x="0" y="${yy + 3}" fill="#858980" font-size="9">${pct(label)}</text>`;
       }).join('');
-      const circles = values.map((value, index) => `<circle cx="${x(index)}" cy="${y(value)}" r="3.1" fill="#fbfaf5" stroke="#173f35" stroke-width="1.5"><title>${data[index].fecha}: ${pct(value)}</title></circle>`).join('');
-      document.getElementById('trendChart').innerHTML = `${grid}<polyline fill="none" stroke="#173f35" stroke-width="2.2" points="${points(values)}"/><polyline fill="none" stroke="#7656d6" stroke-width="2.6" stroke-linecap="round" points="${points(averages)}"/>${circles}<text x="${padX}" y="${height - 2}" fill="#858980" font-size="9">19 jul</text><text x="${width - padX - 33}" y="${height - 2}" fill="#858980" font-size="9">17 ago</text>`;
-      const current = values.slice(-7).reduce((a, b) => a + b, 0) / 7;
-      const previous = values.slice(-14, -7).reduce((a, b) => a + b, 0) / 7;
-      const delta = (current - previous) * 100;
+      const circles = values.map((value, index) => `<circle cx="${x(index)}" cy="${y(value)}" r="3.1" fill="#fbfaf5" stroke="#173f35" stroke-width="1.5"><title>${data[index].month}: ${pct(value)}</title></circle>`).join('');
+      const monthLabels = data.map((row, idx) => {
+        const short = (row.month || '').substring(0, 3);
+        return `<text x="${x(idx)}" y="${height - 2}" fill="#858980" font-size="9" text-anchor="middle">${short}</text>`;
+      }).join('');
+      document.getElementById('trendChart').innerHTML = `${grid}<polyline fill="none" stroke="#173f35" stroke-width="2.2" points="${points(values)}"/><polyline fill="none" stroke="#7656d6" stroke-width="2.6" stroke-linecap="round" points="${points(averages)}"/>${circles}${monthLabels}`;
+      const current = baseRates[i - 1];
+      const lastMonth = data[data.length - 1];
+      const prevMonth = data.length > 1 ? data[data.length - 2] : lastMonth;
+      const curRate = lastMonth[steps[i].key] / Math.max(1, lastMonth[steps[i - 1].key]);
+      const prevRate = prevMonth[steps[i].key] / Math.max(1, prevMonth[steps[i - 1].key]);
+      const delta = (curRate - prevRate) * 100;
       document.getElementById('trendValue').textContent = pct(baseRates[i - 1]);
       document.getElementById('trendLabel').textContent = `${steps[i - 1].short} → ${steps[i].short}`;
-      document.getElementById('trendNote').innerHTML = `<b style="color:${delta >= 0 ? '#2e6c40' : '#ba554a'}">${delta >= 0 ? 'Mejora' : 'Caída'} de ${Math.abs(delta).toFixed(1)} pp</b> en los últimos 7 días vs. los 7 anteriores.`;
+      document.getElementById('trendNote').innerHTML = `<b style="color:${delta >= 0 ? '#2e6c40' : '#ba554a'}">${delta >= 0 ? 'Mejora' : 'Ca&#237;da'} de ${Math.abs(delta).toFixed(1)} pp</b> en ${lastMonth.month} vs. ${prevMonth.month}.`;
     }
 
     function renderScenarioControls() {
@@ -682,7 +676,7 @@
         const max = Math.min(99, Math.ceil(rate * 100 + 15));
         return `<div class="slider-row"><div class="slider-label"><strong>${steps[index].short} → ${steps[index + 1].short}</strong><span>Base ${pct(rate)}</span></div><input type="range" min="${min}" max="${max}" step="0.1" value="${(rate * 100).toFixed(1)}" data-rate="${index}" aria-label="Tasa ${steps[index].short} a ${steps[index + 1].short}"><output class="slider-value mono" id="rateValue${index}">${pct(rate)}</output></div>`;
       }).join('');
-      const aov = totals.ingresos / totals.venta_confirmada;
+      const aov = totals.ingresos / Math.max(1, totals.compra);
       document.getElementById('aovInput').value = aov.toFixed(0);
       document.querySelectorAll('[data-rate]').forEach(input => input.addEventListener('input', event => {
         document.getElementById(`rateValue${event.target.dataset.rate}`).textContent = `${Number(event.target.value).toFixed(1)}%`;
@@ -705,7 +699,7 @@
       const sales = simulate(rates);
       const baseSales = simulate(baseRates);
       const aov = Math.max(0, Number(document.getElementById('aovInput').value || 0));
-      const baseAov = totals.ingresos / totals.venta_confirmada;
+      const baseAov = totals.ingresos / Math.max(1, totals.compra);
       const revenue = sales * aov;
       const baseRevenue = baseSales * baseAov;
       const salesGain = sales - baseSales;
@@ -719,18 +713,18 @@
     }
 
     function renderTable() {
-      document.getElementById('dailyTable').innerHTML = data.slice(-7).reverse().map(row => `<tr><td>${new Date(`${row.fecha}T12:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' })}</td>${steps.map(step => `<td class="mono">${formatNumber.format(row[step.key])}</td>`).join('')}</tr>`).join('');
+      document.getElementById('dailyTable').innerHTML = data.slice().reverse().map(row => `<tr><td style="text-transform:capitalize">${row.month}</td>${steps.map(step => `<td class="mono">${formatNumber.format(row[step.key])}</td>`).join('')}</tr>`).join('');
     }
 
     function renderAll() {
       totals = Object.fromEntries([...steps.map(step => [step.key, sum(data, step.key)]), ['ingresos', sum(data, 'ingresos')]]);
-      baseRates = steps.slice(1).map((_, index) => totals[steps[index + 1].key] / totals[steps[index].key]);
+      baseRates = steps.slice(1).map((_, index) => totals[steps[index + 1].key] / Math.max(1, totals[steps[index].key]));
       renderKpis(); renderFunnel(); renderOpportunities(); renderTransitionTabs(); renderTrend(); renderScenarioControls(); renderTable();
     }
 
     async function init() {
       try {
-        const response = await fetch('funnel_data.csv');
+        const response = await fetch('data_funnel.csv');
         if (!response.ok) throw new Error('CSV no disponible');
         data = parseCsv(await response.text());
       } catch (error) {
@@ -745,9 +739,8 @@
       { name: 'Inicio', short: 'Inicio', url: 'https://www.avinkadelivery.com/', color: '#173f35' },
       { name: 'Ficha de producto', short: 'Producto', url: 'https://www.avinkadelivery.com/filete-pechuga-especial-2kg/p', color: '#1a5243' },
       { name: 'Agregar a carrito', short: 'Carrito', url: 'https://www.avinkadelivery.com/checkout/#/cart', color: '#2f6254' },
-      { name: 'Datos personales', short: 'Datos', url: 'https://www.avinkadelivery.com/checkout/#/payment', color: '#557d69' },
-      { name: 'Pagar', short: 'Pago', url: 'https://www.avinkadelivery.com/checkout/#/payment', color: '#7a9c61' },
-      { name: 'Venta confirmada', short: 'Venta', url: 'https://www.avinkadelivery.com/', color: '#bff39a' }
+      { name: 'Pagar', short: 'Pago', url: 'https://www.avinkadelivery.com/checkout/#/payment', color: '#557d69' },
+      { name: 'Compra confirmada', short: 'Compra', url: 'https://www.avinkadelivery.com/', color: '#bff39a' }
     ];
     let screenshotTimestamps = {};
     const LS_PREFIX = 'funnel_shot_';
