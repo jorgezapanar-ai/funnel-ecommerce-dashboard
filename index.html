@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Dashboard interactivo para controlar y simular el funnel de conversión de un ecommerce.">
   <title>Dashboard Funnel Ecommerce</title>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
   <style>
     :root {
       --ink: #151814;
@@ -1194,34 +1195,69 @@
       } catch (e) { console.error('closeReportModal error:', e); }
     }
 
-    function _sendReportFlow() {
-      try {
-        var toEmail = document.getElementById('reportTo').value.trim();
-        var subject = document.getElementById('reportSubject').value.trim();
-        var errorEl = document.getElementById('reportError');
-        var sendBtn = document.getElementById('reportSendBtn');
-        if (!toEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(toEmail)) {
-          errorEl.textContent = 'Ingresa un correo v\u00e1lido.';
-          errorEl.classList.add('visible');
-          return;
-        }
-        errorEl.classList.remove('visible');
-        var body = 'Reporte de Funnel Avinka Delivery\n\n';
-        body += 'Compras: ' + totals.compra + '\n';
-        body += 'Conversi\u00f3n: ' + (totals.compra / Math.max(1, totals.inicio) * 100).toFixed(1) + '%\n';
-        body += 'Ingresos: ' + formatMoney.format(totals.ingresos) + '\n\n';
-        body += 'Abre el dashboard para ver el reporte completo.';
-        var mailto = 'mailto:' + toEmail + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
-        window.location.href = mailto;
-        document.getElementById('reportFormBody').style.display = 'none';
-        document.getElementById('reportFoot').style.display = 'none';
-        document.getElementById('reportSuccess').classList.add('visible');
-        document.getElementById('reportSuccess').querySelector('p').textContent = 'Se abri\u00f3 tu cliente de correo con el resumen.';
-      } catch (e) {
-        console.error('sendReport error:', e);
-        document.getElementById('reportError').textContent = 'Error: ' + e.message;
-        document.getElementById('reportError').classList.add('visible');
+    (function _initEmailJS() {
+      if (typeof emailjs !== 'undefined') {
+        emailjs.init('XkPL1Y4UMyfVIgOMh');
       }
+    })();
+
+    function _sendReportFlow() {
+      var toEmail = document.getElementById('reportTo').value.trim();
+      var subject = document.getElementById('reportSubject').value.trim();
+      var message = document.getElementById('reportMessage').value.trim();
+      var errorEl = document.getElementById('reportError');
+      var sendBtn = document.getElementById('reportSendBtn');
+
+      if (!toEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(toEmail)) {
+        errorEl.textContent = 'Ingresa un correo v\u00e1lido.';
+        errorEl.classList.add('visible');
+        return;
+      }
+      errorEl.classList.remove('visible');
+
+      if (typeof emailjs === 'undefined') {
+        errorEl.textContent = 'Error: EmailJS no se carg\u00f3. Verifica tu conexi\u00f3n a internet.';
+        errorEl.classList.add('visible');
+        return;
+      }
+
+      sendBtn.classList.add('loading');
+      sendBtn.disabled = true;
+
+      var dateStr = new Date().toLocaleDateString('es-PE', { day:'2-digit', month:'long', year:'numeric' });
+      var htmlReport = _buildReportHtml();
+      var plainSummary = 'Reporte de Funnel Avinka Delivery\n\n' +
+        'Compras: ' + totals.compra + '\n' +
+        'Conversi\u00f3n: ' + (totals.compra / Math.max(1, totals.inicio) * 100).toFixed(1) + '%\n' +
+        'Ingresos: ' + formatMoney.format(totals.ingresos) + '\n\n' +
+        'Abre el dashboard para ver el reporte completo.';
+
+      var templateParams = {
+        to_email: toEmail,
+        from_name: 'Avinka Dashboard',
+        subject: subject || '[Avinka] Reporte de Funnel',
+        message: message ? message + '\n\n' + plainSummary : plainSummary,
+        html_report: htmlReport,
+        date: dateStr
+      };
+
+      emailjs.send('service_pet5n7m', 'template_7ljnrang', templateParams)
+        .then(function() {
+          sendBtn.classList.remove('loading');
+          sendBtn.disabled = false;
+          document.getElementById('reportFormBody').style.display = 'none';
+          document.getElementById('reportFoot').style.display = 'none';
+          document.getElementById('reportSuccess').classList.add('visible');
+          document.getElementById('reportSuccess').querySelector('p').textContent =
+            'Reporte enviado a ' + toEmail;
+        })
+        .catch(function(err) {
+          console.error('EmailJS error:', err);
+          sendBtn.classList.remove('loading');
+          sendBtn.disabled = false;
+          errorEl.textContent = 'Error al enviar: ' + (err.text || err.message || 'Intenta de nuevo.');
+          errorEl.classList.add('visible');
+        });
     }
 
     (function _initReportEvents() {
